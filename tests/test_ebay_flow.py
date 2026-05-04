@@ -17,7 +17,7 @@ class TestEbayE2E:
         cart_page = CartPage(page)
 
         login_page.ensure_logged_in(
-            username=test_case["username"],
+            username=test_case["user_name"],
             password=test_case["password"]
         )
 
