@@ -1,31 +1,32 @@
+import pytest
 import json
 from pages.search_page import SearchPage
 from pages.item_page import ItemPage
 from pages.cart_page import CartPage
+from utils.helpers import load_test_data
 
+# פונקציית עזר לטעינת הנתונים מהקובץ החיצוני
 
-def test_ebay_e2e_flow(page):
-    with open("data/test_data.json") as f:
-        data = json.load(f)
+class TestEbayE2E:
+    
+    @pytest.mark.parametrize("test_case", load_test_data()) 
+    def test_ebay_purchase_flow(self, page, test_case):
+        search_page = SearchPage(page)
+        item_page = ItemPage(page)
+        cart_page = CartPage(page)
 
-    search_page = SearchPage(page)
-    item_page = ItemPage(page)
-    cart_page = CartPage(page)
+        urls = search_page.search_items_by_name_under_price(
+            query=test_case["search_query"],
+            max_price=test_case["max_price"],
+            limit=test_case["items_limit"]
+        )       
+  
+        if not urls:
+            pytest.skip(f"No items found for {test_case['search_query']} under {test_case['max_price']}")
 
-    items = search_page.search_items_by_name_under_price(
-        data["search_query"],
-        data["max_price"],
-        data["items_limit"]
-    )
+        item_page.add_items_to_cart(urls)
 
-    prices = []
-
-    for i, url in enumerate(items):
-        price = item_page.add_to_cart(url, i)
-        if price:
-            prices.append(price)
-
-    cart_page.assert_total_not_exceeds(
-        data["max_price"],
-        len(prices)
-    )
+        cart_page.assert_cart_total_not_exceeds(
+            budget_per_item=test_case["max_price"],
+            items_count=len(urls)
+        )

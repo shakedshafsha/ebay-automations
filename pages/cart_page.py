@@ -1,22 +1,23 @@
-from .base_page import BasePage
 import re
+from playwright.sync_api import Page
 
-class CartPage(BasePage):
+class CartPage:
+    def __init__(self, page: Page):
+        self.page = page
 
-    def get_total(self):
+        self.total = page.locator(".cart-bucket-lineitem-total")
+
+    def assertCartTotalNotExceeds(self, budget_per_item: float, items_count: int):
+
         self.page.goto("https://cart.ebay.com")
 
-        total_text = self.page.locator(".cart-bucket-lineitem-total").inner_text()
+        total_text = self.total.inner_text()
 
         match = re.search(r"(\d+[.,]?\d*)", total_text.replace(",", ""))
-        return float(match.group(1)) if match else None
-
-    def assert_total_not_exceeds(self, budget_per_item: float, items_count: int):
-        total = self.get_total()
-        assert total is not None
+        total = float(match.group(1)) if match else 0
 
         max_allowed = budget_per_item * items_count
 
-        assert total <= max_allowed, f"Cart total {total} exceeds {max_allowed}"
+        assert total <= max_allowed, f"{total} > {max_allowed}"
 
-        self.take_screenshot("cart")
+        self.page.screenshot(path="screenshots/cart.png")

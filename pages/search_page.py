@@ -1,77 +1,114 @@
+# pages/search_page.py
 import re
-from playwright.sync_api import Page
+from typing import List
+from playwright.sync_api import Page, expect
+
+from utils.helpers import extract_price
 
 class SearchPage:
     def __init__(self, page: Page):
         self.page = page
-        # Selectors
-        self.SEARCH_BOX = "#gh-ac"
-        self.SEARCH_BTN = self.page.get_by_role("button", name="Search")
-        self.ITEMS_CONTAINER = "ul.srp-results .s-item"
-        self.ITEM_LINK = "a.s-item__link"
-        self.ITEM_PRICE = "span.s-item__price"
-        self.NEXT_PAGE_BTN = "a.pagination__next"
 
-    def navigate(self):
+        self.search_box = page.get_by_role("combobox", name="Search for anything")
+        self.search_button = page.get_by_role("button", name="Search")
+
+        self.max_price_input = page.get_by_role("textbox", name=re.compile("max", re.I))
+
+        self.items = page.locator("li.s-item")
+        self.next_button = page.get_by_role("link", name=re.compile("next", re.I))
+
+    def searchItemsByNameUnderPrice(
+        self, query: str, max_price: float, limit: int = 5
+    ) -> List[str]:
+
+        self._open_homepage()
+        self._search(query)
+        self._apply_max_price_filter(max_price)
+
+        return self._collect_items_with_paging(max_price, limit)
+
+    def open_homepage(self):
         self.page.goto("https://www.ebay.com")
 
-    def apply_price_filter(self, min_price: float, max_price: float):
-        
-        min_input = self.page.locator("//input[contains(@aria-label,'Min')]")
-        max_input = self.page.locator("//input[contains(@aria-label,'Max')]")
+    def search(self, query: str):
+        self.search_box.fill(query)
+        self.search_button.click()
+        expect(self.items.first).to_be_visible()
 
-        min_input.fill(str(min_price))
-        max_input.fill(str(max_price))
-
-        max_input.press("Enter")
-
-    def search_items_by_name_under_price(self, query: str, max_price: float, limit: int = 5):
-        
-        self.navigate()
-
-        self.page.fill(self.SEARCH_BOX, query)
-        self.SEARCH_BTN.click()
-        
+    def apply_max_price_filter(self, max_price: float):
         try:
-            self.apply_price_filter(0,max_price)
+            self.max_price_input.fill(str(max_price))
+            self.max_price_input.press("Enter")
+            self.page.wait_for_load_state("networkidle")
         except Exception:
-            print("Price filter not available, filtering manually.")
+            # fallback – ignore if not available
+            pass
 
-        results_urls = []
+    def collect_items_with_paging(
+        self, max_price: float, limit: int
+    ) -> List[str]:
 
-        while len(results_urls) < limit:
+        results = []
 
-            self.page.locator("li.s-item").first.wait_for()
+        while len(results) < limit:
+            results.extend(self._collect_items_from_current_page(max_price, limit - len(results)))
 
-            items = self.page.locator("li.s-item")
-
-            for item in items.all():
-                if len(results_urls) >= limit:
-                    break
-
-                price_text = item.locator("span.s-item__price").inner_text()
-                price_value = self._extract_price(price_text)
-
-                if price_value <= max_price:
-                    url = item.locator("a.s-item__link").get_attribute("href")
-
-                    if url and "itm" in url:
-                        results_urls.append(url)
-
-            next_btn = self.page.locator("a.pagination__next")
-
-            if next_btn.is_visible():
-                next_btn.click()
-                self.page.wait_for_load_state("domcontentloaded")
-            else:
+            if len(results) >= limit:
                 break
 
-        return results_urls
+            if not self._go_to_next_page():
+                break
 
-    def _extract_price(self, price_str: str) -> float:
+        return results
+
+    def collect_items_from_current_page(
+        self, max_price: float, remaining: int
+    ) -> List[str]:
+
+        collected = []
+
+        count = self.items.count()
+
+        for i in range(count):
+            if len(collected) >= remaining:
+                break
+
+            item = self.items.nth(i)
+
+            if not self._has_price(item):
+                continue
+
+            price = self._get_item_price(item)
+
+            if price > max_price:
+                continue
+
+            link = self._get_item_link(item)
+
+            if link:
+                collected.append(link)
+
+        return collected
+
+    def has_price(self, item) -> bool:
+        return item.locator(".s-item__price").count() > 0
+
+    def get_item_price(self, item) -> float:
+        text = item.locator(".s-item__price").inner_text()
+        return extract_price(text)
+
+    def get_item_link(self, item) -> str:
+        link = item.locator("a.s-item__link").get_attribute("href")
+        return link if link and "itm" in link else None
+
+    def go_to_next_page(self) -> bool:
         try:
-            first_price = price_str.split("to")[0]
-            clean_price = re.sub(r'[^\d.]', '', first_price)
-            return float(clean_price)
-        except:
-            return float('inf') 
+            if self.next_button.is_visible():
+                self.next_button.click()
+                self.page.wait_for_load_state("domcontentloaded")
+                return True
+            return False
+        except Exception:
+            return False
+
+   
