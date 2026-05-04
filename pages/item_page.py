@@ -14,7 +14,7 @@ class ItemPage:
         self.buy_now_btn = page.get_by_role("button", name=re.compile("buy", re.I))
         self.variation_selects = page.locator("select")
 
-    def addItemsToCart(self, urls: List[str]) -> None:
+    def add_items_to_cart(self, urls: List[str]) -> None:
 
         for i, url in enumerate(urls):
             self.page.goto(url)
@@ -35,7 +35,7 @@ class ItemPage:
             self.page.go_back()
             self.page.wait_for_load_state("domcontentloaded")
 
-    def _select_random_variations(self):
+    def select_random_variations(self):
         if self.variation_selects.count() == 0:
             return
 

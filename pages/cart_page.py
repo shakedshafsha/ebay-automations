@@ -1,15 +1,17 @@
 import re
 from playwright.sync_api import Page
 
+from config.urls import EBAY_CART_PAGE
+
 class CartPage:
     def __init__(self, page: Page):
         self.page = page
 
         self.total = page.locator(".cart-bucket-lineitem-total")
 
-    def assertCartTotalNotExceeds(self, budget_per_item: float, items_count: int):
+    def assert_cart_total_not_exceeds(self, budget_per_item: float, items_count: int):
 
-        self.page.goto("https://cart.ebay.com")
+        self.page.goto(EBAY_CART_PAGE)
 
         total_text = self.total.inner_text()
 
