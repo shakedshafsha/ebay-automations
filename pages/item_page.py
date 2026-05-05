@@ -40,8 +40,6 @@ class ItemPage:
         return collected_prices
 
     def select_random_variations(self):
-        # --- Strategy 1: <select> dropdowns visible anywhere on the page ---
-        # eBay uses native <select> for size on many shoe listings
         all_selects = self.page.locator("select:visible, select")
         for i in range(all_selects.count()):
             sel = all_selects.nth(i)
@@ -63,8 +61,6 @@ class ItemPage:
             except Exception as e:
                 print(f"[WARN] <select> #{i} failed: {e}")
 
-        # --- Strategy 2: button/chip groups (color, style, etc.) ---
-        # Try both the standard MSKU container and a broader fallback
         group_selectors = [
             "[data-testid='x-msku-selection-node']",
             "[data-testid='ux-selector-section']",
@@ -92,4 +88,4 @@ class ItemPage:
                     print(f"[VAR] Button group '{group_sel}' #{i} → clicked option #{i}")
                 except Exception as e:
                     print(f"[WARN] Button group '{group_sel}' #{i} failed: {e}")
-            break  # stop after first matching group selector
+            break 
