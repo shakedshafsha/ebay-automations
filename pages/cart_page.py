@@ -32,7 +32,7 @@ class CartPage:
         self.page.wait_for_load_state("domcontentloaded")
 
         try:
-            self.page.wait_for_selector("text=/US \\$/", timeout=15000)
+            self.page.wait_for_selector("text=/US \\$/")
         except Exception:
             pass
 
