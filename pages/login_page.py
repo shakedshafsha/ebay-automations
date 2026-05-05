@@ -3,7 +3,7 @@
 import re
 from playwright.sync_api import Page, expect
 
-from config.urls import EBAY_SIGHIN_IN_PAGE
+from config.urls import EBAY_SIGNIN_PAGE
 from .base_page import BasePage
 
 
@@ -22,7 +22,7 @@ class LoginPage(BasePage):
         if self.sign_in_link.is_visible():
             self.sign_in_link.click()
         else:
-            self.page.goto(EBAY_SIGHIN_IN_PAGE)
+            self.page.goto(EBAY_SIGNIN_PAGE)
 
         expect(self.email_input).to_be_visible()
 
@@ -53,6 +53,6 @@ class LoginPage(BasePage):
 
     def _wait_for_login_success(self):
         try:
-            expect(self.account_indicator).to_be_visible(timeout=10000)
+            expect(self.account_indicator).to_be_visible()
         except Exception:
             self.page.wait_for_load_state("networkidle")

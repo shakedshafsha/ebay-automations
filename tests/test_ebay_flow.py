@@ -16,10 +16,10 @@ class TestEbayE2E:
         item_page = ItemPage(page)
         cart_page = CartPage(page)
 
-        login_page.ensure_logged_in(
-            username=test_case["user_name"],
-            password=test_case["password"]
-        )
+        # login_page.ensure_logged_in(
+        #     username=test_case["user_name"],
+        #     password=test_case["password"]
+        # )
 
         urls = search_page.search_items_by_name_under_price(
             query=test_case["search_query"],
@@ -27,14 +27,16 @@ class TestEbayE2E:
             limit=test_case["items_limit"]
         )
 
-        if not urls:
-            pytest.skip(
-                f"No items found for {test_case['search_query']} under {test_case['max_price']}"
-            )
+        assert urls, (
+            f"Aucun item trouvé pour '{test_case['search_query']}' "
+            f"sous {test_case['max_price']} — vérifie les sélecteurs ou le réseau."
+        )
+
+        cart_page.clear_cart()
 
         item_page.add_items_to_cart(urls)
 
         cart_page.assert_cart_total_not_exceeds(
             budget_per_item=test_case["max_price"],
-            items_count=len(urls) 
+            items_count=len(urls)
         )
