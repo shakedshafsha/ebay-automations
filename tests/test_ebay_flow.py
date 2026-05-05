@@ -16,10 +16,10 @@ class TestEbayE2E:
         item_page = ItemPage(page)
         cart_page = CartPage(page)
 
-        # login_page.ensure_logged_in(
-        #     username=test_case["user_name"],
-        #     password=test_case["password"]
-        # )
+        login_page.ensure_logged_in(
+            username=test_case["user_name"],
+            password=test_case["password"]
+        )
 
         urls = search_page.search_items_by_name_under_price(
             query=test_case["search_query"],
@@ -28,8 +28,8 @@ class TestEbayE2E:
         )
 
         assert urls, (
-            f"Aucun item trouvé pour '{test_case['search_query']}' "
-            f"sous {test_case['max_price']} — vérifie les sélecteurs ou le réseau."
+            f"No items found for '{test_case['search_query']}' "
+            f"under {test_case['max_price']} — check selectors or network."
         )
 
         cart_page.clear_cart()

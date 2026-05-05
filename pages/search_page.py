@@ -49,7 +49,7 @@ class SearchPage:
             self.page.wait_for_load_state("domcontentloaded")
             self.page.wait_for_selector("ul.srp-results li[id^='item']")
         except Exception as e:
-            print(f"[WARN] Filtre prix non appliqué: {e}")
+            print(f"[WARN] Price filter could not be applied: {e}")
 
     def collect_items_with_paging(
         self, max_price: float, limit: int
