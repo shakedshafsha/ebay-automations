@@ -34,9 +34,9 @@ class TestEbayE2E:
 
         cart_page.clear_cart()
 
-        item_page.add_items_to_cart(urls)
+        prices = item_page.add_items_to_cart(urls)
 
         cart_page.assert_cart_total_not_exceeds(
             budget_per_item=test_case["max_price"],
-            items_count=len(urls)
+            actual_prices=prices
         )
