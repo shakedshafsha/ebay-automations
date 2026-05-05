@@ -1,27 +1,84 @@
-# eBay E2E Automation Project
+# eBay E2E Automation
 
-This project provides an automated E2E testing suite for the eBay shopping flow, built using **Python**, **Pytest**, and **Playwright**.
-
-It is designed with scalability, maintainability, and clarity in mind, following modern automation best practices.
+End-to-End test suite for the eBay shopping flow, built with **Python**, **Pytest**, and **Playwright**.
 
 ---
 
-## Project Architecture
+## Test Scenario
 
-The project follows the **Page Object Model** design pattern, ensuring:
+1. **Login** to eBay with credentials from the test data file (currently running as guest — login is commented out)
+2. **Search** for items by keyword
+3. **Filter** results by a maximum price
+4. **Collect** up to 5 item URLs that fall within the price range
+5. **Clear** the cart to start from a clean state
+6. **Add** each collected item to the cart and record its price
+7. **Assert** that the sum of the added item prices does not exceed the allowed budget (`max_price × items_count`)
 
-* Clear separation between test logic and UI interactions
-* High code reusability
-* Easier maintenance and scalability
+### Pass Criteria
 
-### Directory Structure
+The test passes if:
 
+```
+sum(individual item prices) ≤ max_price × number_of_items
+```
 
-pages/     # Page classes (BasePage, SearchPage, ItemPage, CartPage, LoginPage)
-tests/     # Test files (e.g., test_ebay_flow.py)
-data/      # Test data (JSON files for data-driven testing)
-config/    # Environment configurations and base URLs
-utils/     # Shared helpers and utility functions
+---
+
+## Design Principles
+
+| Principle | How it is applied |
+|---|---|
+| **POM** (Page Object Model) | Each page has its own class in `pages/`. Tests interact only through page objects, never with raw selectors. |
+| **OOP** | All page classes inherit from `BasePage`, which provides `navigate()` and `take_screenshot()`. |
+| **SRP** | Each class owns exactly one responsibility: `SearchPage` finds items, `ItemPage` adds them to cart, `CartPage` validates the total, `LoginPage` handles authentication. |
+| **Data-Driven** | Test inputs (query, price limit, credentials) live in `data/search_data.json` and are injected via `@pytest.mark.parametrize`. |
+
+---
+
+## Project Structure
+
+```
+ebay-automations/
+├── pages/
+│   ├── base_page.py      # Shared page utilities (navigate, screenshot)
+│   ├── login_page.py     # Login / session management
+│   ├── search_page.py    # Search bar, price filter, result collection
+│   ├── item_page.py      # Item detail page, variation selection, add-to-cart
+│   └── cart_page.py      # Cart clearing and total validation
+├── tests/
+│   └── test_ebay_flow.py # Single parametrised E2E test
+├── data/
+│   └── search_data.json  # Test input: query, max_price, items_limit, credentials
+├── config/
+│   ├── urls.py           # Base URLs (home, cart, sign-in)
+│   └── conftest.py       # (unused — root conftest.py is active)
+├── utils/
+│   └── helpers.py        # load_test_data(), extract_price()
+├── screenshots/          # Auto-created; debug and result screenshots saved here
+├── conftest.py           # Browser context config (viewport 1280×720)
+├── pytest.ini            # pythonpath = . so packages resolve correctly
+└── requirements.txt      # Python dependencies
+```
+
+---
+
+## Test Data
+
+Edit `data/search_data.json` to change the search scenario:
+
+```json
+[
+  {
+    "search_query": "shoes",
+    "max_price": 220,
+    "items_limit": 5,
+    "user_name": "your@email.com",
+    "password": "yourPassword"
+  }
+]
+```
+
+Multiple objects in the array produce one test case each.
 
 ---
 
@@ -29,41 +86,25 @@ utils/     # Shared helpers and utility functions
 
 ### Prerequisites
 
-* Python 3.9+
-* pip (Python package manager)
-
----
+- Python 3.9+
+- pip
 
 ### Installation
 
-1. **Clone the repository**
-
 ```bash
+# 1. Clone
 git clone https://github.com/shakedshafsha/ebay-automations.git
-cd <EBAY-AUTOMATIONS>
-```
+cd ebay-automations
 
-2. **Create and activate a virtual environment**
-
-```bash
+# 2. Create and activate a virtual environment
 python -m venv .venv
+.venv\Scripts\activate        # Windows
+# source .venv/bin/activate   # macOS / Linux
 
-# Windows
-.venv\Scripts\activate
-
-# macOS / Linux
-source .venv/bin/activate
-```
-
-3. **Install dependencies**
-
-```bash
+# 3. Install Python dependencies
 pip install -r requirements.txt
-```
 
-4. **Install Playwright browsers**
-
-```bash
+# 4. Install Playwright browsers
 playwright install
 ```
 
@@ -71,59 +112,27 @@ playwright install
 
 ## Running Tests
 
-### Run all tests (headless mode)
-
 ```bash
+# Headless (default)
 pytest
-```
 
-### Run tests with browser UI (headed mode)
-
-```bash
+# With visible browser
 pytest --headed
-```
 
-### Generate HTML report
-
-```bash
+# Generate an HTML report
 pytest --html=report.html
+
+# Run only Chromium
+pytest --browser chromium
 ```
 
----
-
-## Assumptions and Limitations
-
-* **Guest Access (Login Stub)**
-  Tests run as a guest user to avoid CAPTCHA and anti-bot mechanisms. No login flow is executed.
-
-* **Currency Handling**
-  Prices may appear in different currencies (e.g., USD / ILS) depending on IP location.
-  The framework validates values generically rather than relying on a fixed currency.
-
-* **Environment**
-  Tests are executed against the **eBay production environment**.
-
-* **Dynamic UI**
-  eBay frequently updates its UI. While stable selectors are used, significant UI changes may require updates in the `pages/` directory.
+Screenshots are saved automatically to `screenshots/` on every run.
 
 ---
 
-## Design Highlights
+## Limitations
 
-* Page Object Model (POM)
-* Data-Driven Testing via JSON
-* Separation of concerns (tests vs. logic)
-* Scalable and maintainable structure
-* Playwright best practices (auto-waits, locators, stability)
-
----
-
-## Notes
-
-This project is intended as a demonstration of E2E automation skills, including:
-
-* UI test design
-* Framework architecture
-* Handling real-world challenges (dynamic UI, flaky behavior, environment differences)
-
----
+- **Guest cart behaviour** — eBay's guest cart does not persist items reliably across page navigations. For full cart-total validation against the eBay-displayed subtotal, login must be enabled in `tests/test_ebay_flow.py`.
+- **Dynamic UI** — eBay updates its selectors periodically. If tests break, check `pages/` for outdated CSS selectors.
+- **CAPTCHA / 2FA** — Automated login may be blocked by eBay's bot-detection. Run tests during off-peak hours or use a dedicated test account.
+- **Currency** — Prices are extracted as plain numbers; currency symbols are stripped to keep comparisons locale-independent.
