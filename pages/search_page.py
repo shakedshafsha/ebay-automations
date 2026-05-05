@@ -95,23 +95,15 @@ class SearchPage:
         return collected
 
     def has_price(self, item) -> bool:
-        return item.locator("span.s-item__price").count() > 0 or item.locator("span.s-card__price").count() > 0
+        return item.locator("span.s-item__price, span.s-card__price").count() > 0
 
     def get_item_price(self, item) -> float:
-        locator = (
-            item.locator("span.s-item__price")
-            if item.locator("span.s-item__price").count() > 0
-            else item.locator("span.s-card__price")
+        return extract_price(
+            item.locator("span.s-item__price, span.s-card__price").first.inner_text()
         )
-        return extract_price(locator.first.inner_text())
 
     def get_item_link(self, item) -> str:
-        locator = (
-            item.locator("a.s-item__link")
-            if item.locator("a.s-item__link").count() > 0
-            else item.locator("a.s-card__link")
-        )
-        link = locator.first.get_attribute("href")
+        link = item.locator("a.s-item__link, a.s-card__link").first.get_attribute("href")
         return link if link and "itm" in link else None
 
     def go_to_next_page(self) -> bool:
